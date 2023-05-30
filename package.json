@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "@kleros/file-to-ipfs": "^0.3.2",
+    "parcel": "^2.6.0"
+  },
+  "devDependencies": {
+    "prettier": "^2.8.8"
+  },
+  "scripts": {
+    "build": "parcel build",
+    "start": "parcel",
+    "pin": "file-to-ipfs -f dist/index.js"
+  },
+  "source": "src/index.js",
+  "prettier": {
+    "tabWidth": 2,
+    "printWidth": 120
+  }
+}
