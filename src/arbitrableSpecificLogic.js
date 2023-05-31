@@ -30,8 +30,7 @@ export const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
             }
         }
     }`
-  )
-    .then((data) => {
+  ).then((data) => {
       return data.disputeEntities[0];
     })
     .catch((err) => console.error);

@@ -9,11 +9,15 @@
   "scripts": {
     "build": "parcel build",
     "start": "parcel",
-    "pin": "file-to-ipfs -f dist/index.js"
+    "pin": "file-to-ipfs -f dist/index.js",
+    "pinSource": "file-to-ipfs -f src/index.js"
   },
   "source": "src/index.js",
   "prettier": {
     "tabWidth": 2,
     "printWidth": 120
+  },
+  "volta": {
+    "node": "18.16.0"
   }
 }
