@@ -48,20 +48,22 @@ const getArticleContent = (articleID) =>
 
 async function getMetaEvidence()  {
 
-  const { disputeID, arbitrableContractAddress, arbitrableChainID, arbitrableJsonRpcUrl } = scriptParameters;
-  if (!arbitrableContractAddress || !arbitrableChainID || !arbitrableJsonRpcUrl || !disputeID) {
-
+  const { disputeID, arbitrableChainID } = scriptParameters;
+  if (!disputeID || !arbitrableChainID) {
+    console.log("missing parameters");
     resolveScript({});
+    return;
   }
-  const article = (await getArticleByDisputeID(subgraphURL, disputeID)).article;
 
-  const articleContent = await getArticleContent(article.articleID);
-  resolveScript({
-    arbitrableInterfaceURI: `https://truthpost.news/${arbitrableChainID}/${article.id}`,
-    title: articleContent.title,
-    description: articleContent.description
-  });
+  getArticleByDisputeID(subgraphURL, disputeID).then(function(data) {
+    const article = data.article;
+    getArticleContent(article.articleID).then(function(articleContent) {
+      resolveScript({
+        arbitrableInterfaceURI: `https://truthpost.news/${arbitrableChainID}/${article.id}`,
+        title: articleContent.title,
+        description: articleContent.description
+      });
+    }, console.error);
+  }, console.error);
 
 };
-
-exports.getMetaEvidence = getMetaEvidence;
