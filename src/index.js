@@ -1,5 +1,9 @@
-const ipfsGateway = 'https://ipfs.kleros.io'
-const subgraphURL = 'https://api.thegraph.com/subgraphs/name/proveuswrong/thetruthpost'
+const ipfsGateway = "https://ipfs.kleros.io";
+const SUBGRAPH_ENDPOINT_PREFIX = "https://api.thegraph.com/subgraphs/name";
+const subgraphEndpoints = {
+  1: `${SUBGRAPH_ENDPOINT_PREFIX}/proveuswrong/thetruthpost`,
+  5: `${SUBGRAPH_ENDPOINT_PREFIX}/proveuswrong/thetruthpost-goerli`,
+};
 
 const queryTemplate = (endpoint, query) =>
   fetch(endpoint, {
@@ -20,7 +24,7 @@ const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
   return queryTemplate(
     subgraphEndpoint,
     `{
-        disputeEntities(where: {id: "${disputeID}"}) {
+        disputeEntity(id: "${disputeID}") {
             id
             article{
                 id
@@ -32,7 +36,7 @@ const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
         }
     }`
   ).then((data) => {
-    return data.disputeEntities[0];
+    return data.disputeEntity;
   })
     .catch((err) => console.error);
 };
@@ -48,22 +52,23 @@ const getArticleContent = (articleID) =>
 
 async function getMetaEvidence()  {
 
-  const { disputeID, arbitrableChainID } = scriptParameters;
+  const { disputeID, arbitrableChainID, arbitrableContractAddress } = scriptParameters;
   if (!disputeID || !arbitrableChainID) {
     console.log("missing parameters");
     resolveScript({});
     return;
   }
 
-  getArticleByDisputeID(subgraphURL, disputeID).then(function(data) {
+  getArticleByDisputeID(subgraphEndpoints[arbitrableChainID], disputeID).then(function(data) {
     const article = data.article;
     getArticleContent(article.articleID).then(function(articleContent) {
       resolveScript({
-        arbitrableInterfaceURI: `https://truthpost.news/${arbitrableChainID}/${article.id}`,
+        arbitrableInterfaceURI: `https://truthpost.news/0x${parseInt(arbitrableChainID).toString(16)}/${arbitrableContractAddress}/${article.id}`,
         title: articleContent.title,
         description: articleContent.description
       });
     }, console.error);
   }, console.error);
-
 };
+
+

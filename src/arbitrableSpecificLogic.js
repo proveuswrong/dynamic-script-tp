@@ -19,7 +19,7 @@ export const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
   return queryTemplate(
     subgraphEndpoint,
     `{
-        disputeEntities(where: {id: "${disputeID}"}) {
+        disputeEntity(id: "${disputeID}") {
             id
             article{
                 id
@@ -31,7 +31,7 @@ export const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
         }
     }`
   ).then((data) => {
-      return data.disputeEntities[0];
+      return data.disputeEntity;
     })
     .catch((err) => console.error);
 };
