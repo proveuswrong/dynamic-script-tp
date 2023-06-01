@@ -20,6 +20,22 @@ const queryTemplate = (endpoint, query) =>
     .then((r) => r.json())
     .then((json) => json.data);
 
+const getAllMetaevidences = async (subgraphEndpoint) => {
+  return queryTemplate(
+    subgraphEndpoint,
+    `{
+      metaEvidenceEntities(orderBy: id, orderDirection: asc){
+        id
+        uri
+      }
+    }`
+  )
+    .then((data) => {
+      return data.metaEvidenceEntities;
+    })
+    .catch((err) => console.error);
+};
+
 const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
   return queryTemplate(
     subgraphEndpoint,
@@ -32,6 +48,7 @@ const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
                 owner
                 category
                 bounty
+                challenger
             }
         }
     }`
@@ -42,7 +59,7 @@ const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
     .catch((err) => console.error);
 };
 
-const getArticleContent = (articleID) =>
+const getContentOnIPFS = (articleID) =>
   fetch(ipfsGateway + articleID).then((response) => {
     if (!response.ok) {
       throw new Error("Network response was not OK");
@@ -59,19 +76,47 @@ async function getMetaEvidence() {
     return;
   }
 
-  getArticleByDisputeID(subgraphEndpoints[arbitrableChainID], disputeID).then(function (data) {
-    const article = data.article;
-    getArticleContent(article.articleID).then(function (articleContent) {
-      const linkToArticle = `https://truthpost.news/0x${parseInt(arbitrableChainID).toString(
-        16
-      )}/${arbitrableContractAddress}/${article.id}/`;
-      resolveScript({
-        arbitrableInterfaceURI: linkToArticle,
-        title: `Truth Post Article Dispute: ${articleContent.title}`,
-        description: `[The article](${linkToArticle}) from Truth Post, identified by the code ${article.id} and located on the contract address ${arbitrableContractAddress} on network with the ID ${arbitrableChainID}, is under dispute. A challenger has raised concerns regarding the accuracy of the article. Your task is to review the content of the article, any evidence presented, and the curation policy. Based on this information, please vote on the validity of the challenge.\n\nThe article starts after the seperator.\n***\n${articleContent.description}`,
+  const metaEvidencePromise = getAllMetaevidences(subgraphEndpoints[arbitrableChainID]);
+
+  const articlePromise = getArticleByDisputeID(subgraphEndpoints[arbitrableChainID], disputeID).then((articleData) => {
+    const article = articleData.article;
+    const articleContentPromise = getContentOnIPFS(article.articleID);
+
+    return Promise.all([articleContentPromise]).then(([articleContent]) => {
+      return {
+        article,
+        articleContent,
+      };
+    });
+  });
+
+  Promise.all([metaEvidencePromise, articlePromise])
+    .then(([metaEvidence, articleData]) => {
+      const { article, articleContent } = articleData;
+
+      const category = article.category;
+      const metaevidencePath = metaEvidence.filter((m) => m.id == category)[0].uri;
+
+      const metaevidenceContentPromise = getContentOnIPFS(metaevidencePath).then((metaevidenceContent) => {
+        const fileURI = metaevidenceContent.fileURI;
+        return { fileURI };
       });
-    }, console.error);
-  }, console.error);
+
+      Promise.all([metaevidenceContentPromise])
+        .then(([metaevidenceData]) => {
+          const { fileURI } = metaevidenceData;
+          const linkToArticle = `https://truthpost.news/0x${parseInt(arbitrableChainID).toString(
+            16
+          )}/${arbitrableContractAddress}/${article.id}/`;
+          resolveScript({
+            arbitrableInterfaceURI: linkToArticle,
+            title: `Truth Post Article Dispute: ${articleContent.title}`,
+            description: `There is a controversy brewing over [an article](${linkToArticle}) from Truth Post. Here are the relevant details:\n\n- Article ID: ${article.id}\n- Contract Address: ${arbitrableContractAddress}\n- Network ID: ${arbitrableChainID}\n\nA critic has challenged the article's accuracy. Your task is to review the content of the article, any evidence presented, and [the curation policy](${ipfsGateway}${fileURI}). Based on this information, please vote on the validity of the challenge.\n\nThe article starts after the separator.\n***\n${articleContent.description}`,
+          });
+        })
+        .catch(console.error);
+    })
+    .catch(console.error);
 }
 
 module.exports = { getMetaEvidence };
