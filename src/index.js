@@ -35,9 +35,10 @@ const getArticleByDisputeID = async (subgraphEndpoint, disputeID) => {
             }
         }
     }`
-  ).then((data) => {
-    return data.disputeEntity;
-  })
+  )
+    .then((data) => {
+      return data.disputeEntity;
+    })
     .catch((err) => console.error);
 };
 
@@ -50,8 +51,7 @@ const getArticleContent = (articleID) =>
     return response.json().then();
   });
 
-async function getMetaEvidence()  {
-
+async function getMetaEvidence() {
   const { disputeID, arbitrableChainID, arbitrableContractAddress } = scriptParameters;
   if (!disputeID || !arbitrableChainID) {
     console.log("missing parameters");
@@ -59,16 +59,19 @@ async function getMetaEvidence()  {
     return;
   }
 
-  getArticleByDisputeID(subgraphEndpoints[arbitrableChainID], disputeID).then(function(data) {
+  getArticleByDisputeID(subgraphEndpoints[arbitrableChainID], disputeID).then(function (data) {
     const article = data.article;
-    getArticleContent(article.articleID).then(function(articleContent) {
+    getArticleContent(article.articleID).then(function (articleContent) {
+      const linkToArticle = `https://truthpost.news/0x${parseInt(arbitrableChainID).toString(
+        16
+      )}/${arbitrableContractAddress}/${article.id}/`;
       resolveScript({
-        arbitrableInterfaceURI: `https://truthpost.news/0x${parseInt(arbitrableChainID).toString(16)}/${arbitrableContractAddress}/${article.id}`,
-        title: articleContent.title,
-        description: articleContent.description
+        arbitrableInterfaceURI: linkToArticle,
+        title: `Truth Post Article Dispute: ${articleContent.title}`,
+        description: `[The article](${linkToArticle}) from Truth Post, identified by the code ${article.id} and located on the contract address ${arbitrableContractAddress} on network with the ID ${arbitrableChainID}, is under dispute. A challenger has raised concerns regarding the accuracy of the article. Your task is to review the content of the article, any evidence presented, and the curation policy. Based on this information, please vote on the validity of the challenge.\n\nThe article starts after the seperator.\n***\n${articleContent.description}`,
       });
     }, console.error);
   }, console.error);
-};
+}
 
-
+module.exports = { getMetaEvidence };
